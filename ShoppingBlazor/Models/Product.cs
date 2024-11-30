@@ -29,12 +29,11 @@ public class Product
     public List<string> Colors { get; set; } = new();
     public string? Description { get; set; }
 
-
     [Required(ErrorMessage = "دسته‌بندی الزامی است")]
     public int CategoryId { get; set; }
-    public Category Category { get; set; }
+    public Category? Category { get; set; }
 
     [Required(ErrorMessage = "برند الزامی است")]
     public int BrandId { get; set; }
-    public Brand Brand { get; set; }
+    public Brand? Brand { get; set; }
 }

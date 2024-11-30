@@ -1,0 +1,321 @@
+﻿@using ShoppingBlazor.Models
+@rendermode InteractiveServer
+
+<div class="card">
+    <div class="card-body">
+        <form class="row g-3">
+            <div class="col-md-4">
+                <label for="searchProductName" class="form-label">نام کالا</label>
+                <input type="text" id="searchProductName" class="form-control" @bind="SearchProductName" placeholder="جستجو بر اساس نام کالا">
+            </div>
+            <div class="col-md-4">
+                <label for="productCategory" class="form-label">دسته‌بندی</label>
+                <select id="productCategory" class="form-select" @bind="SelectedProductCategory">
+                    <option value="">همه</option>
+                    @foreach (var category in Categories)
+                    {
+                        <option value="@category">@category</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="productBrand" class="form-label">برند</label>
+                <select id="productBrand" class="form-select" @bind="SelectedProductBrand">
+                    <option value="">همه</option>
+                    @foreach (var brand in Brands)
+                    {
+                        <option value="@brand">@brand</option>
+                    }
+                </select>
+            </div>
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="button" class="btn btn-primary" @onclick="Search">
+                    <i class="bi bi-search me-2"></i> جستجو
+                </button>
+                <button type="button" class="btn btn-secondary" @onclick="ResetFilters">
+                    <i class="bi bi-eye me-2"></i> نمایش همه
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center my-3">
+    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#productModal" @onclick="() => PrepareProductForAddOrEdit()">
+        <i class="bi bi-plus-circle me-2"></i> افزودن
+    </button>
+    <button class="btn btn-outline-success" @onclick="ExportProductsToExcel">خروجی اکسل</button>
+</div>
+
+<table class="table table-bordered text-center">
+    <thead class="table-light">
+        <tr>
+            <th>شناسه</th>
+            <th>نام کالا</th>
+            <th>دسته‌بندی</th>
+            <th>برند</th>
+            <th>قیمت</th>
+            <th>عملیات</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (_products.Count == 0)
+        {
+            <tr>
+                <td colspan="7">رکوردی برای نمایش وجود ندارد</td>
+            </tr>
+        }
+        else
+        {
+            @foreach (var product in _products)
+            {
+                <tr>
+                    <td>@product.Id</td>
+                    <td>@product.Name</td>
+                    <td>@product.Category?.Name</td>
+                    <td>@product.Brand?.Name</td>
+                    <td>@product.Price</td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#productModal" @onclick="() => PrepareProductForAddOrEdit(product.Id)">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button type ="button" class="btn btn-sm btn-danger" @onclick ="() => DeleteProduct(product.Id)">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+<div class="modal fade" id="productModal" tabindex="-1" aria-labelledby="productModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title" id="productModalLabel">افزودن / ویرایش کالا</h5>
+            </div>
+            <div class="modal-body">
+                <EditForm Model="@_productModel" OnSubmit="@AddOrEditProduct" FormName="ProductForm">
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="productName" class="form-label">نام کالا <span class="text-danger">*</span></label>
+                            <InputText id="productName" class="form-control" @bind-Value="@_productModel.Name" />
+                        </div>
+                        <div class="col-md-4">
+                            <label for="categoryName" class="form-label">نام دسته‌بندی <span class="text-danger">*</span></label>
+                            <InputSelect id="categoryName" class="form-select" @bind-Value="@_productModel.CategoryId">
+                                <option value="">--</option>
+                                @foreach (var category in Categories)
+                                {
+                                    <option value="@category.Id">@category.Name</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="brandName" class="form-label">نام برند <span class="text-danger">*</span></label>
+                            <InputSelect id="brandName" class="form-select" @bind-Value="@_productModel.BrandId">
+                                <option value="">--</option>
+                                @foreach (var brand in Brands)
+                                {
+                                    <option value="@brand.Id">@brand.Name</option>
+                                }
+                            </InputSelect>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="price" class="form-label">قیمت (ریال) <span class="text-danger">*</span></label>
+                            <InputNumber id="price" class="form-control" @bind-Value="@_productModel.Price" />
+                        </div>
+                        <div class="col-md-4">
+                            <label for="availability" class="form-label">موجودی <span class="text-danger">*</span></label>
+                            <InputNumber id="availability" class="form-control" @bind-Value="@_productModel.Availability" />
+                        </div>
+                        <div class="col-md-4">
+                            <label for="supplierName" class="form-label">نام تامین کننده</label>
+                            <InputText id="supplierName" class="form-control" @bind-Value="@_productModel.SupplierName" />
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="supplierEmail" class="form-label">ایمیل تامین کننده</label>
+                            <InputText id="supplierEmail" class="form-control" @bind-Value="@_productModel.SupplierEmail" />
+                        </div>
+                        <div class="col-md-4">
+                            <label for="startDate" class="form-label">تاریخ شروع نمایش</label>
+                            <input type="date" id="startDate" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="endDate" class="form-label">تاریخ پایان نمایش</label>
+                            <input type="date" id="endDate" class="form-control">
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="imagePath" class="form-label">تصویر کالا <span class="text-danger">*</span></label>
+                            <input type="file" id="imagePath" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="catalogPath" class="form-label">کاتالوگ کالا</label>
+                            <input type="file" id="catalogPath" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="productColors" class="form-label">رنگ‌بندی محصول</label>
+                            <div class="d-flex align-items-center">
+                                <InputText id="productColors" class="form-control me-2" @bind-Value="@NewColor" />
+                                <button type="button" class="btn btn-secondary" @onclick="AddColor">
+                                    <i class="bi bi-plus-circle"></i>
+                                </button>
+                            </div>
+                            <ul class="list-group mt-2">
+                                @foreach (var color in _productModel.Colors)
+                                {
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        @color
+                                        <button type="button" class="btn btn-sm btn-danger" @onclick="() => RemoveColor(color)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">توضیحات</label>
+                        <InputTextArea id="description" class="form-control" @bind-Value="@_productModel.Description" Rows="5" placeholder="توضیحات محصول" />
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-2"></i> ذخیره
+                    </button>
+                    <button type="button" class="btn btn-secondary" @onclick="ResetForm">
+                        <i class="bi bi-arrow-counterclockwise me-2"></i> پاک سازی
+                    </button>
+
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@code {
+
+    private List<Product> _products = [];
+    private Product _productModel { get; set; } = new();
+    private string NewColor = string.Empty;
+
+    private string SearchProductName = "";
+    private string SelectedProductCategory = "";
+    private string SelectedProductBrand = "";
+
+    private List<Category> Categories;
+    private List<Brand> Brands;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Categories =
+        [
+            new Category { Id = 1, Name = "دسته 1" },
+    new Category { Id = 2, Name = "دسته 2" }
+        ];
+
+        Brands =
+        [
+            new Brand { Id = 1, Name = "برند 1" },
+    new Brand { Id = 2, Name = "برند 2" }
+        ];
+    }
+
+    private void PrepareProductForAddOrEdit(int? productId = null)
+    {
+        if (productId.HasValue)
+        {
+            var product = _products.Single(p => p.Id == productId.Value);
+            _productModel = product;
+        }
+        else
+        {
+            _productModel = new Product
+                {
+                    Colors = []
+                };
+        }
+    }
+
+    private void AddOrEditProduct()
+    {
+        if (_productModel.Id == 0)
+            AddProduct();
+        else
+            EditProduct(_productModel.Id);
+
+        ResetForm();
+    }
+
+    private void AddProduct()
+    {
+        _productModel.Id = _products.Any() ? _products.Max(x => x.Id) + 1 : 1;
+        _products.Add(_productModel);
+    }
+
+    private void EditProduct(int id)
+    {
+        var product = _products.Single(p => p.Id == id);
+        product.Name = _productModel.Name;
+        product.Price = _productModel.Price;
+        product.Availability = _productModel.Availability;
+        product.SupplierName = _productModel.SupplierName;
+        product.SupplierEmail = _productModel.SupplierEmail;
+    }
+
+    private void DeleteProduct(int id)
+    {
+        var product = _products.Single(p => p.Id == id);
+        _products.Remove(product);
+        StateHasChanged();
+    }
+
+    private void ResetForm()
+    {
+        _productModel = new Product();
+        NewColor = string.Empty;
+    }
+
+    private void AddColor()
+    {
+        if (!string.IsNullOrWhiteSpace(NewColor) && !_productModel.Colors.Contains(NewColor))
+        {
+            _productModel.Colors.Add(NewColor);
+            NewColor = string.Empty;
+        }
+    }
+
+    private void RemoveColor(string color)
+    {
+        _productModel.Colors.Remove(color);
+    }
+
+    private async Task HandleFileUpload(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        var filePath = $"uploads/{file.Name}";
+        await using var stream = file.OpenReadStream();
+        await using var fileStream = new FileStream(filePath, FileMode.Create);
+        await stream.CopyToAsync(fileStream);
+
+        _productModel.ImagePath = filePath;
+    }
+
+    private void Search() { }
+    private void ResetFilters() { }
+
+    private void ExportProductsToExcel() { }
+}
